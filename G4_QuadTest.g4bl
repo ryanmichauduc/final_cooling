@@ -1,0 +1,57 @@
+# Test for quadrupoles
+
+# Created by: Daniel Fu
+# Updated: February 5, 2025
+
+# COLORS:  100 red, 010 green, 111 white, 110 yellow, 001 blue, 101 magenta, 011 cyan
+
+######################### DEFINE PHYSICS MODEL
+  
+  param zbegin=0.0
+  start initialZ=$zbegin  y=0.000   x=0.00   z=0.00    radiusCut=300
+  param steppingFormat=N,GLOBAL,CL,STEP,VOL,PROCESS,P,KE,POLAR,B
+  param fieldVoxels=400,400,400 
+  param -unset maxStep=0.5
+  param -unset maxStepInWedge=0.1
+  
+  param -unset minRangeCut=1
+
+  physics QGSP_BERT doStochastics=1 spinTracking=1 synchrotronRadiation=1 minRangeCut=$minRangeCut # disable=Decay
+  # physics FTFP_BERT doStochastics=1 spinTracking=1 synchrotronRadiation=1 # disable=Decay
+
+  trackcuts keep=mu-,mu+
+
+  particlecolor proton=1,1,1 
+  particlecolor pi+=0,1,0 
+  particlecolor mu+=1,0.5,0   # orange
+  particlecolor mu-=0,1,0   # green
+  particlecolor e+=1,0,0      # red
+  particlecolor gamma=0,0,1   # blue
+  particlecolor e-=1,0.5,0    # orange
+
+######################### DEFINE INPUT BEAM
+
+  param -unset nparticles=12000
+  param -unset beamfile=test_particles_before.txt
+  param -unset outfile=particles_after.txt
+  beam ascii filename=$beamfile nEvents=$nparticles beamZ=0  
+
+######################### DEFINE QUAD
+
+  genericquad QF1 fieldLength=5.0 ironLength=5.0 ironRadius=80.0 apertureRadius=60.0 gradient=14 ironColor=0,1,0
+  genericquad QD1 fieldLength=5.0 ironLength=5.0 ironRadius=80.0 apertureRadius=60.0 gradient=-14 ironColor=1,0,0
+
+######################### DEFINE VIRTUAL SCREENS
+
+  param VDRad=60.0
+  virtualdetector VD radius=$VDRad length=0.2 color=1,1,1 format=asciiExtended coordinates=centerline filename=$outfile
+
+##########################################################################################################
+############################################  PLACE ELEMENTS  ############################################
+##########################################################################################################
+
+  place QF1 z=37.5
+  place QD1 z=512.5
+  place QD1 z=587.5
+  place QF1 z=1062.5
+  place VD front=1 z=1100

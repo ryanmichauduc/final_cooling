@@ -1,0 +1,68 @@
+# Test for quadrupoles
+
+# Created by: Daniel Fu
+# Updated: February 5, 2025
+
+# COLORS:  100 red, 010 green, 111 white, 110 yellow, 001 blue, 101 magenta, 011 cyan
+
+######################### DEFINE PHYSICS MODEL
+  
+param zbegin=0.0
+start initialZ=$zbegin  y=0.000   x=0.00   z=0.00    radiusCut=120
+param steppingFormat=N,GLOBAL,CL,STEP,VOL,PROCESS,P,KE,POLAR,B
+param fieldVoxels=400,400,400 
+param -unset maxStep=0.5
+param -unset maxStepInWedge=0.1
+
+param -unset minRangeCut=1
+
+physics QGSP_BERT doStochastics=1 spinTracking=1 synchrotronRadiation=1 minRangeCut=$minRangeCut
+
+trackcuts keep=mu-,mu+
+
+particlecolor proton=1,1,1 
+particlecolor pi+=0,1,0 
+particlecolor mu+=1,0.5,0   # orange
+particlecolor mu-=0,1,0   # green
+particlecolor e+=1,0,0      # red
+particlecolor gamma=0,0,1   # blue
+particlecolor e-=1,0.5,0    # orange
+
+######################### DEFINE INPUT BEAM
+
+param -unset nparticles=50000
+param -unset beamfile=particles_before.txt
+param -unset outfile=particles_after
+beam ascii filename=$beamfile nEvents=$nparticles beamZ=0  
+
+######################### DEFINE QUAD
+
+param -unset fodo_grad=6.66666666
+
+genericquad QF1 fieldLength=75.0 ironLength=75.0 ironRadius=120.0 apertureRadius=100.0 gradient=$fodo_grad ironColor=0,1,0
+genericquad QD1 fieldLength=75.0 ironLength=75.0 ironRadius=120.0 apertureRadius=100.0 gradient=-1*$fodo_grad ironColor=1,0,0
+
+##########################################################################################################
+############################################  PLACE ELEMENTS  ############################################
+##########################################################################################################
+
+param -unset full_start=1
+
+if $full_start==1
+    place QF1 z=-75 front=1
+endif
+place QF1 z=0 front=1
+place QD1 z=475 front=1
+place QD1 z=550 front=1
+place QF1 z=1025 front=1
+if $full_start==1
+    place QF1 z=1100 front=1
+endif
+
+zntuple z=0 filename=$outfile-0.txt
+zntuple z=75 filename=$outfile-75.txt
+zntuple z=475 filename=$outfile-475.txt
+zntuple z=550 filename=$outfile-550.txt
+zntuple z=625 filename=$outfile-625.txt
+zntuple z=1025 filename=$outfile-1025.txt
+zntuple z=1100 filename=$outfile-1100.txt
