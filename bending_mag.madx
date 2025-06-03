@@ -1,0 +1,38 @@
+BEAM, particle=POSMUON;
+b_start: beta0, betx=0.0462, bety=0.0262, dx=0.01625, dy=-0.0002, dpx = -0.18, dpy = -0.02;
+
+angle1=0.5;
+angle2=0.5;
+tilt1 = 0;
+tilt2 = 0;
+
+b1: rbend, l=1, angle:=angle1, tilt:=tilt1;
+b2: rbend, l=1, angle:=angle2, tilt:=tilt2;
+
+LINE: sequence, l=2.55;
+    MF0: marker, at=0;
+
+    b1, at = 0.55;
+    b2, at = 2;
+    MF1: marker, at=2.55;    
+endsequence;
+
+USE, sequence=line;
+MATCH, sequence=line,beta0=b_start;
+
+    vary, name=angle1, step=.00001;
+    vary, name=angle2, step=.00001;
+    !vary, name=s1, step=.00001;
+    !vary, name=s2, step=.00001;
+    constraint, range=MF1, dx=-0.0000406, dpx =  -0.006; !  dpy = -0.0006, dy=-0.00000603,
+    simplex, calls=30000,  tolerance=1E-15;
+    !lmdif, calls=20000,  tolerance=1E-23;
+!simplex, calls=1000,  tolerance=1E-13;
+ENDMATCH;
+
+!use, sequence=line;
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss,file="bending.tfs",beta0=b_start;
+
+stop;

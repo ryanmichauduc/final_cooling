@@ -1,0 +1,223 @@
+
+BEAM, particle=POSMUON;;
+b_start: beta0, betx=0.0462, bety=0.0262;
+!b_goal: beta0,  betx=0.0442, bety=0.0261;
+
+!Starting guess from Ryan
+k_qf1= 19;
+k_qd1=-19;
+FODO: sequence, l=1.1;
+    MF0: marker, at=0;
+    QF1h: Quadrupole, K1=k_qf1, L=0.075, AT=0.0375;
+    QD1h: Quadrupole, K1=k_qd1, L=0.075, AT=0.5125;
+    MD: Marker, AT=0.55;
+    QD1h: QD1h, AT=0.5875;
+    QF1h: QF1h, AT=1.0625;
+    MF1: Marker, at=1.1;
+endsequence;
+
+!use, sequence=fodo;
+!select,flag=twiss,clear;
+!twiss, file="fodo.tfs";
+
+!find periodic starting Twiss for the given layout
+USE, sequence=FODO;
+MATCH, sequence=FODO;
+    vary, name=k_qf1, step=.00001;
+    vary, name=k_qd1, step=.00001;
+    constraint, range=MD, alfx=1, alfy=1;
+    simplex, calls=1000,  tolerance=1E-13;
+ENDMATCH;
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss, file="fodo_periodic.tfs";
+
+bx0f=table(twiss,MF0,betx);
+by0f=table(twiss,MF0,bety);
+ax0f=table(twiss,MF0,alfx);
+ay0f=table(twiss,MF0,alfy);
+bx1f=table(twiss,MF1,betx);!=bx0f if convergence
+by1f=table(twiss,MF1,bety);!=by0f if convergence
+ax1f=table(twiss,MF1,alfx);!=0 if converged 
+ay1f=table(twiss,MF1,alfy);!=0 if converged 
+b_fodo: beta0, betx=bx1f,bety=by1f,alfx=ax1f,alfy=ay1f;
+
+!Upper part
+!first guess
+k_q1= k_qd1;
+k_q2= k_qf1;
+k_q3= k_qd1;
+k_q4= k_qf1;
+UP_end: sequence, l= 2.275+0.5;
+    Q1: Quadrupole, K1:=k_q1, L=0.15, AT=0.075+0.5*0.5;!Adding 0.25 m drift in front of Q1 decreased the k-value
+    Q2: Quadrupole, K1:=k_q2, L=0.15, AT=0.625+0.5*0.5;
+    Q3: Quadrupole, K1:=k_q3, L=0.15, AT=1.175+0.5*0.5;
+    Q4: Quadrupole, K1:=k_q4, L=0.15, AT=1.725+0.5;!Adding 0.25(+0.4) m drift in front of Q4 decreased the k-value
+    QF1h: QF1h, at=1.725+0.15*0.5+0.4+0.15*0.25+0.5;
+    MF0: MF0, AT=1.725+0.15*0.5+0.4+0.15*0.5+0.5;
+endsequence;
+
+USE, sequence=UP_end;
+MATCH, sequence=UP_end,beta0=b_start;
+    vary, name=k_q1, step=.00001;
+    vary, name=k_q2, step=.00001;
+    vary, name=k_q3, step=.00001;
+    vary, name=k_q4, step=.00001;
+    constraint, range=MF0, betx=bx0f, bety=by0f, alfx=ax0f, alfy=ay0;
+    simplex, calls=100000,  tolerance=1E-13;
+    !lmdif,calls=10000,  tolerance=1E-13;
+    !JACOBIAN, calls=20000, tolerance=1E-3;
+ENDMATCH;
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss,file="up_end.tfs", beta0=b_start;
+
+!Final part
+!first guess
+k_q5= k_q4;
+k_q6= k_q3;
+k_q7= k_q2;
+k_q8= k_q1;
+DOWN_end: sequence, l= 2.225;
+    QF1h: QF1h, at=0.0375; 
+    Q5: Quadrupole, K1:=k_q5, L=0.15, AT=0.55;
+    Q6: Quadrupole, K1:=k_q6, L=0.15, AT=0.8;
+    Q7: Quadrupole, K1:=k_q7, L=0.15, AT=1.35;
+    Q8: Quadrupole, K1:=k_q8, L=0.15, AT=1.9;
+    MEND: marker, AT=2.225;
+endsequence;
+
+
+USE, sequence=DOWN_end;
+MATCH, sequence=DOWN_end,beta0=b_fodo;
+    vary, name=k_q5, step=.00001;
+    vary, name=k_q6, step=.00001;
+    vary, name=k_q7, step=.00001;
+    vary, name=k_q8, step=.00001;
+    constraint, range=#END, betx=0.0442, bety=0.0261, alfx=0,alfy=0;
+    simplex, calls=100000,  tolerance=1E-13;
+ENDMATCH;
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss,file="down_end.tfs", beta0=b_fodo;
+
+!each FODO Cell is of length 0.475
+
+
+whole: sequence, l=16;
+    Q1: Quadrupole, K1:=k_q1, L=0.15, AT=0.075+0.5*0.5;
+    Q2: Quadrupole, K1:=k_q2, L=0.15, AT=0.625+0.5*0.5;
+    Q3: Quadrupole, K1:=k_q3, L=0.15, AT=1.175+0.5*0.5;
+    Q4: Quadrupole, K1:=k_q4, L=0.15, AT=1.725+0.5;
+    QF1h: QF1h, at=1.725+0.15*0.5+0.4+0.15*0.25+0.5;
+    MF0: MF0, AT=1.725+0.15*0.5+0.4+0.15*0.5+0.5;
+
+    QF1h: QF1h, K1:=k_qf1, L=0.075, AT=2.8125; 
+    QD1h: Quadrupole, K1:=k_qd1, L=0.075, AT=3.2875; !+0.475
+    MD: Marker, AT=3.325; !+0.0375
+
+    !! From Last Quadrupole to Next FODO CELL we have 0.075
+    QD1h: QD1h, AT=3.3625; !+0.0375
+    QF1h: QF1h, AT=3.8375; !+0.475
+    MF1: Marker, at=3.875; !+0.0375
+    
+
+    QF1h: QF1h, AT=3.9125;
+    QD1h: QD1h, AT=4.3875;
+    M2: Marker, AT= 4.425;
+
+    QD1h: QD1h, AT=4.4625;
+    QF1h: QF1h, AT=4.9375;
+    M3: Marker, At=4.975; 
+
+
+    QF1h: QF1h, AT=5.0125; 
+    QD1h: QD1h, AT=5.4875;
+    M4: Marker, AT=5.525;
+
+    QD1h: QD1h, AT=5.5625;
+    QF1h: QF1h, AT=6.0375;
+    M5: Marker, At=6.075; 
+
+    QF1h: QF1h, AT=6.1125;
+    QD1h: QD1h, AT=6.5875;
+    M6: Marker, AT=6.625;
+
+    QD1h: QD1h, AT=6.6625;
+    QF1h: QF1h, AT=7.1375;
+    M7: Marker, At=7.175; 
+
+    QF1h: QF1h, AT=7.2125;
+    QD1h: QD1h, AT=7.6875;
+    M8: Marker, AT=7.725;
+
+    QD1h: QD1h, AT=7.7625;
+    QF1h: QF1h, AT=8.2375;
+    M9: Marker, At=8.275; 
+
+    QF1h: QF1h, AT=8.3125;
+    QD1h: QD1h, AT=8.7875;
+    M10: Marker, AT=8.825;
+
+    QD1h: QD1h, AT=8.8625;
+    QF1h: QF1h, AT=9.3375;
+    M11: Marker, At=9.375; 
+
+    QF1h: QF1h, AT=9.4125;
+    QD1h: QD1h, AT=9.8875;
+    M12: Marker, AT=9.925;
+
+    QD1h: QD1h, AT=9.9625;
+    QF1h: QF1h, AT=10.4375;
+    M13: Marker, At=10.475; 
+
+
+    QF1h: QF1h, AT=10.5125;
+    QD1h: QD1h, AT=10.9875;
+    M16: Marker, AT=11.025;
+
+    QD1h: QD1h, AT=11.0625;
+    QF1h: QF1h, AT=11.5375;
+    M17: Marker, At=11.575; 
+
+    QF1h: QF1h, AT=11.6125;
+    QD1h: QD1h, AT=12.0875;
+    M18: Marker, AT=12.125;
+
+    QD1h: QD1h, AT=12.1625;
+    QF1h: QF1h, AT=12.6375;
+    M19: Marker, At=12.675; 
+
+    QF1h: QF1h, AT=12.7125;
+    QD1h: QD1h, AT=13.1875;
+    M20: Marker, AT=13.225;
+
+    QD1h: QD1h, AT=13.2625;
+    QF1h: QF1h, AT=13.7375;
+    M21: Marker, At=13.775; 
+
+    QF1h: QF1h, at=13.8125;
+    Q5: Q5 ,AT=14.325;
+    Q6: Q6 ,AT=14.575;
+    Q7: Q7, AT=15.125;
+    Q8: Q8, AT=15.675;
+    MEND: marker, at=16;
+
+endsequence;
+
+!QF1h: QF1h, at=3.9125; !! +0.0375      4.5375
+!Q5: Q5 ,AT=4.425; + 0.5125
+!Q6: Q6 ,AT=5.225; + 0.8
+!Q7: Q7, AT=5.775; + 0.55
+!Q8: Q8, AT=6.325; + 0.55
+!MEND: marker, at = 6.65; + 0.325
+
+use, sequence=whole;
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss,file="whole.tfs", beta0=b_start;
+
+select,flag=twiss,clear;
+select,flag=twiss;
+twiss,file="layout.tfs", beta0=b_start;
+stop;
